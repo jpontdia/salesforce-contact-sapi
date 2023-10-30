@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:opentelemetry="http://www.mulesoft.org/schema/mule/opentelemetry"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+		http://www.mulesoft.org/schema/mule/ee/core 
+		http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/salesforce 
+		http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+		http://www.mulesoft.org/schema/mule/opentelemetry 
+		http://www.mulesoft.org/schema/mule/opentelemetry/current/mule-opentelemetry.xsd">
+	
+	<flow name="query" >
+		<ee:transform doc:name="Where Filter" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="soqlFilter" ><![CDATA[ ${file::script-build-filter.dwl} ]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger 
+			level="DEBUG" 
+			doc:name="Logger" 
+			message="#[output application/json --- 'Salesforce filter=' ++ (vars.soqlFilter as String default '')]"
+			category="app"/>		
+		<salesforce:query 
+			doc:name="query" 
+			config-ref="GlobalSalesforceConfig">
+			<salesforce:salesforce-query ><![CDATA[ ${file::script-query.dwl} ]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java --- { soqlFilter : vars.soqlFilter}]]]></salesforce:parameters>
+		</salesforce:query>
+
+		<logger 
+			level="DEBUG" 
+			doc:name="Logger" 
+			message="#[output application/json --- if ( payload != null) payload else 'No records found']"
+			category="app"/>
+
+		<logger 
+			level="DEBUG" 
+			doc:name="Logger"
+			category="app" 
+			message="#[${file::script-records-found.dwl}]"/>
+			
+		<ee:transform doc:name="Record Payload">
+			<ee:message >
+				<ee:set-payload ><![CDATA[${file::script-generate-payload.dwl}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		
+		<error-handler ref="global-error-handler" />
+	</flow>
+	
+	
+	<flow name="getByFilter"  >
+		<ee:transform doc:name="set filter and OpenTelemetry" >
+			<ee:variables >
+
+				<ee:set-variable variableName="firstName" >
+					<![CDATA[attributes.queryParams.firstName]]>
+				</ee:set-variable>
+				<ee:set-variable variableName="lastName" >
+					<![CDATA[attributes.queryParams.lastName]]>
+				</ee:set-variable>
+				<ee:set-variable variableName="email" >
+					<![CDATA[attributes.queryParams.email]]>
+				</ee:set-variable>
+				<ee:set-variable variableName="id" >
+					<![CDATA[if (attributes.queryParams.id == null) attributes.uriParams.'id' else attributes.queryParams.id ]]>
+				</ee:set-variable>
+				<ee:set-variable variableName="openTelemetryTags" ><![CDATA[%dw 2.0
+				output application/java
+				---
+				{
+				    "firstName": attributes.queryParams.firstName default "",
+				    "lastName": attributes.queryParams.lastName default "",
+				    "email": attributes.queryParams.email default "",
+				    "id": (if (attributes.queryParams.id == null) attributes.uriParams.'id' else attributes.queryParams.id) default ""
+				}]]>
+				</ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger 
+			level="INFO" 
+			doc:name="Logger" 
+			message="#[output application/java --- 'Query by firstName=' ++ (vars.firstName default '') ++ ', lastName=' ++ (vars.lastName default '') ++ ', email=' ++ (vars.email default '') ++ ', id=' ++ (vars.id default '')]"
+			category="app"/>
+
+		<flow-ref doc:name="query" name="query"/>
+	</flow>
+
+
+	<flow name="getById">
+		<logger 
+			level="INFO" 
+			doc:name="Logger" 
+			message="#['Query by id']" 
+			category="app"/>
+
+		<flow-ref 
+			doc:name="getByFilter" 
+			name="getByFilter"/>
+
+		<ee:transform doc:name="get one record" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+					output application/json
+					---
+					if (payload[0] == null) {} else payload[0]]]>
+				</ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
