@@ -24,7 +24,7 @@
 
 	<munit:config name="api-scenarios.xml" />
 
-	<munit:dynamic-port propertyName="dynamic.port"/>
+	<munit:dynamic-port propertyName="http.port"/>
 
     <http:request-config name="HTTP_Request_Configuration">
         <http:request-connection host="0.0.0.0" port="${http.port}" />
@@ -38,7 +38,6 @@
 			<munit:enable-flow-source value="get:\contact\(id):api-config" />
 			<munit:enable-flow-source value="post:\contact:application\json:api-config" />
 			<munit:enable-flow-source value="delete:\contact\(id):api-config" />
-
 			<munit:enable-flow-source value="query" />
 			<munit:enable-flow-source value="getByFilter" />
 			<munit:enable-flow-source value="getById" />

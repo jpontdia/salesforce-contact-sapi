@@ -27,11 +27,11 @@
 		<ee:transform 
 			doc:name="get id" >
 			<ee:variables >
-				<ee:set-variable 
-					variableName="id" ><![CDATA[%dw 2.0
-output application/json
----
-attributes.uriParams.'id']]></ee:set-variable>
+				<ee:set-variable variableName="id" ><![CDATA[%dw 2.0
+					output application/json
+					---
+					attributes.uriParams.'id']]>
+				</ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		
@@ -51,12 +51,13 @@ attributes.uriParams.'id']]></ee:set-variable>
 				<ee:transform doc:name="Success Message">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  message: "${messages.record-delete-success}"
-}
-]]></ee:set-payload>
+					output application/json
+					---
+					{
+					message: "${messages.record-delete-success}"
+					}
+					]]>
+				</ee:set-payload>
 			</ee:message>
 		</ee:transform>
 			</when>
@@ -70,12 +71,13 @@ output application/json
 				<ee:transform doc:name="Response">
 					<ee:message >
 						<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-{
-  message: "${messages.record-delete-error}"
-}
-]]></ee:set-payload>
+							output application/json
+							---
+							{
+							message: "${messages.record-delete-error}"
+							}
+							]]>
+						</ee:set-payload>
 					</ee:message>
 					<ee:variables >
 						<ee:set-variable variableName="httpStatus" ><![CDATA[400]]></ee:set-variable>
