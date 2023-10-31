@@ -7,7 +7,6 @@
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
 	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
 		http://www.mulesoft.org/schema/mule/ee/core 
 		http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
 		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -17,16 +16,15 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 		http://www.mulesoft.org/schema/mule/opentelemetry/current/mule-opentelemetry.xsd">
 	
 	<flow name="query" >
-		<ee:transform doc:name="Where Filter" >
+		<ee:transform doc:name="where filter" >
 			<ee:message >
 			</ee:message>
 			<ee:variables >
 				<ee:set-variable variableName="soqlFilter" ><![CDATA[ ${file::script-build-filter.dwl} ]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<logger 
+		<logger doc:name="where filter" 
 			level="DEBUG" 
-			doc:name="Logger" 
 			message="#[output application/json --- 'Salesforce filter=' ++ (vars.soqlFilter as String default '')]"
 			category="app"/>		
 		<salesforce:query 
@@ -36,15 +34,13 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			<salesforce:parameters ><![CDATA[#[output application/java --- { soqlFilter : vars.soqlFilter}]]]></salesforce:parameters>
 		</salesforce:query>
 
-		<logger 
+		<logger doc:name="result" 
 			level="DEBUG" 
-			doc:name="Logger" 
 			message="#[output application/json --- if ( payload != null) payload else 'No records found']"
 			category="app"/>
 
-		<logger 
+		<logger doc:name="total records"
 			level="DEBUG" 
-			doc:name="Logger"
 			category="app" 
 			message="#[${file::script-records-found.dwl}]"/>
 			
@@ -58,7 +54,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 	</flow>
 	
 	
-	<flow name="getByFilter"  >
+	<flow name="get-by-filter"  >
 		<ee:transform doc:name="set filter and OpenTelemetry" >
 			<ee:variables >
 
@@ -86,9 +82,8 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 				</ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<logger 
+		<logger doc:name="get by filter"
 			level="INFO" 
-			doc:name="Logger" 
 			message="#[output application/java --- 'Query by firstName=' ++ (vars.firstName default '') ++ ', lastName=' ++ (vars.lastName default '') ++ ', email=' ++ (vars.email default '') ++ ', id=' ++ (vars.id default '')]"
 			category="app"/>
 
@@ -96,16 +91,15 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 	</flow>
 
 
-	<flow name="getById">
-		<logger 
+	<flow name="get-by-id">
+		<logger doc:name="get by id"
 			level="INFO" 
-			doc:name="Logger" 
 			message="#['Query by id']" 
 			category="app"/>
 
 		<flow-ref 
 			doc:name="getByFilter" 
-			name="getByFilter"/>
+			name="get-by-filter"/>
 
 		<ee:transform doc:name="get one record" >
 			<ee:message >

@@ -7,7 +7,8 @@
 	xmlns="http://www.mulesoft.org/schema/mule/core" 
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core 
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core
 		http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 		http://www.mulesoft.org/schema/mule/ee/core 
 		http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
@@ -16,76 +17,49 @@
 		http://www.mulesoft.org/schema/mule/validation 
 		http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
 		
-	<flow name="delete" doc:id="348ee325-1d10-4a41-80f5-be55af8e8bd3">
+	<flow name="delete">
 		
 		<logger 
 			level="INFO" 
 			doc:name="start" 
-			message="#[&quot;Delete record id=&quot; ++ attributes.uriParams.'id']"
+			message='#["Delete record id=" ++ attributes.uriParams.id]'
 			category="app"/>
 		
-		<ee:transform 
-			doc:name="get id" >
-			<ee:variables >
-				<ee:set-variable variableName="id" ><![CDATA[%dw 2.0
-					output application/json
-					---
-					attributes.uriParams.'id']]>
-				</ee:set-variable>
-			</ee:variables>
-		</ee:transform>
-		
-		<salesforce:delete 
-			doc:name="Delete" 
-			config-ref="GlobalSalesforceConfig" >
-			<salesforce:ids ><![CDATA[#[[vars.id]]]]></salesforce:ids>
+		<salesforce:delete doc:name="Delete" config-ref="GlobalSalesforceConfig" >
+			<salesforce:ids ><![CDATA[#[[attributes.uriParams.id]]]]></salesforce:ids>
 		</salesforce:delete>
 		
 		<choice doc:name="Choice">
 			<when expression="#[payload.successful]">
-				<logger
+				<logger doc:name="success" 
 					level="DEBUG"
-					doc:name="Logger" 
 					message="The record was deleted" 
 					category="app"/>
-				<ee:transform doc:name="Success Message">
-			<ee:message>
-				<ee:set-payload><![CDATA[%dw 2.0
-					output application/json
-					---
-					{
-					message: "${messages.record-delete-success}"
-					}
-					]]>
-				</ee:set-payload>
-			</ee:message>
-		</ee:transform>
+					
+				<ee:transform doc:name="success message">
+					<ee:variables >
+						<ee:set-variable variableName="message" ><![CDATA["${messages.record-delete-success}"]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
 			</when>
 			<otherwise >
-				<logger 
+				<logger doc:name="error"
 					level="DEBUG" 
-					doc:name="Logger" 
 					message="The customer couldn't be deleted" 
 					category="app"/>
 					
-				<ee:transform doc:name="Response">
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
-							output application/json
-							---
-							{
-							message: "${messages.record-delete-error}"
-							}
-							]]>
-						</ee:set-payload>
-					</ee:message>
-					<ee:variables >
+				<ee:transform doc:name="error message">
+					<ee:variables>
+						<ee:set-variable variableName="message" ><![CDATA["${messages.record-delete-error}"]]></ee:set-variable>
 						<ee:set-variable variableName="httpStatus" ><![CDATA[400]]></ee:set-variable>
 					</ee:variables>
 				</ee:transform>
 			</otherwise>
 		</choice>
 		
+		<set-payload doc:name="response"
+			value="#[output application/json --- { message: vars.message }]" />
+			
 		<error-handler ref="global-error-handler" />
 	</flow>
 </mule>

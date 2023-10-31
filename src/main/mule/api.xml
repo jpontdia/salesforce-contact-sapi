@@ -47,11 +47,11 @@
     </flow>
     
     <flow name="get:\contact:api-config">
-		<flow-ref doc:name="getByFilter" name="getByFilter"/>
+		<flow-ref doc:name="getByFilter" name="get-by-filter"/>
     </flow>
     
     <flow name="get:\contact\(id):api-config">
-		<flow-ref doc:name="getById" name="getById"/>
+		<flow-ref doc:name="getById" name="get-by-id"/>
     </flow>
     
     <flow name="post:\contact:application\json:api-config">

@@ -39,34 +39,40 @@
 			<munit:enable-flow-source value="post:\contact:application\json:api-config" />
 			<munit:enable-flow-source value="delete:\contact\(id):api-config" />
 			<munit:enable-flow-source value="query" />
-			<munit:enable-flow-source value="getByFilter" />
-			<munit:enable-flow-source value="getById" />
+			<munit:enable-flow-source value="get-by-filter" />
+			<munit:enable-flow-source value="get-by-id" />
+			<munit:enable-flow-source value="post" />
 		</munit:enable-flow-sources>
 
 		<munit:behavior >
 			<munit:set-event doc:name="get payload"  >
 				<munit:payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;readUrl("classpath://post-payload.dwl")]' />
 			</munit:set-event>
-			<set-variable 
+			<set-variable doc:name="save payload"
 				value="#[payload]" 
-				doc:name="save payload" 
 				variableName="sourcePayload"/>
-			<logger 
+
+			<logger doc:name=" payload"
 				level="INFO" 
-				doc:name="Logger" 
 				message="#[payload]"/>
 		</munit:behavior>
 
 		<munit:execution>
-			<logger 
-				level="INFO" 
-				doc:name="start" 
+			<logger doc:name="start" 
+				level="INFO"
 				message="Main flow - start"/>
 
 			<flow-ref
 				doc:name="remove test record"
 				name="test-remove-test-record" />
 
+			<flow-ref
+				doc:name="create record"
+				name="test-post" />
+
+			<flow-ref
+				doc:name="get record"
+				name="test-get" />
 		</munit:execution>
 	</munit:test>
 	
@@ -110,9 +116,8 @@
 			
 			<when expression="payload[0] != null">
 			
-				<logger 
+				<logger doc:name="delete" 
 					level="INFO" 
-					doc:name="delete" 
 					message='#[ "Record exist in database and needs to be delete it, id=" ++ payload[0].id  default "" ]' />
 					
 				<http:request
@@ -132,8 +137,110 @@
 	</sub-flow>
 
 
+	<!-- ****************************************************************************************************** -->	
+	<sub-flow
+		name="test-post">
 
+		<logger doc:name="create" 
+			level="INFO" 
+			message="Create record" />
+		
+		<set-payload
+			value="#[vars.sourcePayload]"
+			doc:name="payload"/>	
+
+		<http:request
+			method="POST"
+			doc:name="POST"
+			config-ref="HTTP_Request_Configuration"
+			path="/api/contact">
+			<http:headers><![CDATA[#[output application/java
+				---
+				{
+					"Content-Type" : "application/json"
+				}]]]>
+			</http:headers>
+			<http:response-validator>
+				<http:success-status-code-validator values="201" />
+			</http:response-validator>
+		</http:request>
+
+		<ee:transform doc:name="get id" >
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="id"><![CDATA[%dw 2.0
+					import dw::core::Strings
+					var location = attributes.headers.location
+					---
+					if (location != null ) 
+						(location Strings::substringAfterLast "/")
+					else null
+					]]>
+				</ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		
+		<logger doc:name="id"
+			level="INFO" 
+			message='#["Record created id: " ++ vars.id]' />
+			
+		<set-payload
+			value="#[vars.sourcePayload]"
+			doc:name="payload" />
+
+		<http:request
+			method="POST"
+			doc:name="retry again"
+			config-ref="HTTP_Request_Configuration"
+			path="/api/contact">
+			<http:headers><![CDATA[#[output application/java
+				---
+				{
+					"Content-Type" : "application/json"
+				}]]]>		
+			</http:headers>
+			<http:response-validator>
+				<http:success-status-code-validator values="409" />
+			</http:response-validator>
+		</http:request>
+		
+		<logger doc:name="record duplicated" 
+			level="INFO" 
+			message='The record is already present in the database' />
+			
+	</sub-flow>
 	
 
+	<!-- ****************************************************************************************************** -->
+	<sub-flow name="test-get">
+			
+		<logger doc:name="get record"
+			level="INFO"  
+			message='#["Get record id=" ++ vars.id]' />
+			
+		<http:request
+			method="GET"
+			doc:name="get resource by id"
+			config-ref="HTTP_Request_Configuration"
+			path='#["/api/contact/" ++ vars.id]'>
+			<http:uri-params><![CDATA[#[output application/java
+				---
+				{
+					"id" : vars.id
+				}]]]>
+			</http:uri-params>
+			<http:response-validator>
+				<http:success-status-code-validator values="200" />
+			</http:response-validator>
+		</http:request>
 
+		<logger doc:name="result"
+			level="INFO"  
+			message='#[payload]' />
+		
+		<validation:is-true
+			doc:name="id's are equal?"
+			config-ref="Validation_Config"
+			expression="#[vars.id == payload.id]" />
+	</sub-flow>	
 </mule>
