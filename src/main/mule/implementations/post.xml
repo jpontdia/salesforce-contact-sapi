@@ -16,9 +16,8 @@
 		
 	<flow name="post">
 		
-		<logger 
+		<logger doc:name="post"
 			level="INFO" 
-			doc:name="Logger" 
 			message="#[${file::script-log-create.dwl}]"
 			category="app"/> 
 
@@ -76,9 +75,8 @@
 	</flow>
 	
 	<sub-flow name="createRecord">
-		<logger 
+		<logger doc:name="create"
 			level="DEBUG" 
-			doc:name="Logger" 
 			message="The record is going to be created" 
 			category="app"/>
 
@@ -95,28 +93,27 @@
 				</ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<logger 
+		<logger doc:name="sql"
 			level="DEBUG" 
-			doc:name="Logger" 
 			message="#[output application/java --- payload]" 
 			category="app"/>
 
-		<salesforce:create 
-			type="Contact" 
-			doc:name="Create record" 
-			config-ref="GlobalSalesforceConfig"/>
+		<try doc:name="Try" >
+			<salesforce:create type="Contact" doc:name="create" config-ref="GlobalSalesforceConfig" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" />
+			</error-handler>
+		</try>
 
-		<logger 
+		<logger doc:name="result" 
 			level="DEBUG" 
-			doc:name="Logger" 
 			message="#[output application/json --- payload]" 
 			category="app"/>
 
 		<choice doc:name="verify success" >
-			<when expression="#[payload.successful == true]">
-				<logger 
+			<when expression="#[payload != null and payload.successful == true]">
+				<logger doc:name="success"
 					level="DEBUG" 
-					doc:name="Logger"  
 					message="#['Record created successfully with id=' ++ payload.items[0].id]" 
 					category="app"/>
 
@@ -139,10 +136,9 @@
 			</when>
 
 			<otherwise >
-				<logger 
+				<logger doc:name="error"
 					level="DEBUG" 
-					doc:name="Logger"
-					message="The record couldn't be created" 
+					message="There was a problem while creating the record" 
 					category="app"/>
 				
 				<ee:transform doc:name="Status 500 Response" >
@@ -160,9 +156,8 @@
 	</sub-flow>
 	
 	<sub-flow name="record-already-exists" >
-		<logger
+		<logger doc:name="record exists"
 			level="DEBUG" 
-			doc:name="Logger"
 			message="The record already exists in the database"
 			category="app" />
 		<ee:transform doc:name="response" >

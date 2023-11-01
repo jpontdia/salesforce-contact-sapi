@@ -21,7 +21,11 @@ api:
 # Open Telemetry configuration
 otel:
   servicename: "${project.name}:${project.version}"
-  
+
+# For testing scenarios
+test:
+  basepath: "/api/contact"
+
 # Components to configure:
 # - Salesforce connector
 # - OpenTelemtry connector

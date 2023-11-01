@@ -46,7 +46,7 @@
 
 		<munit:behavior >
 			<munit:set-event doc:name="get payload"  >
-				<munit:payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;readUrl("classpath://post-payload.dwl")]' />
+				<munit:payload value='#[%dw 2.0 output application/json --- readUrl("classpath://post-payload.dwl")]' />
 			</munit:set-event>
 			<set-variable doc:name="save payload"
 				value="#[payload]" 
@@ -73,6 +73,10 @@
 			<flow-ref
 				doc:name="get record"
 				name="test-get" />
+
+			<flow-ref
+				doc:name="delete record"
+				name="test-delete" />
 		</munit:execution>
 	</munit:test>
 	
@@ -97,7 +101,7 @@
 			method="GET"
 			doc:name="get record by name"
 			config-ref="HTTP_Request_Configuration"
-			path="/api/contact">
+			path="${test.basepath}">
 
 			<http:headers><![CDATA[#[output application/java --- { "Content-Type" : "application/json" }]]]></http:headers>
 			<http:query-params><![CDATA[#[output application/java
@@ -124,7 +128,7 @@
 					method="DELETE"
 					doc:name="delete"
 					config-ref="HTTP_Request_Configuration"
-					path='#[ "/api/contact/" ++ (payload[0].id  default "") ]' >
+					path='#[ "${test.basepath}" ++ (payload[0].id  default "") ]' >
 
 					<http:response-validator>
 						<http:success-status-code-validator values="200" />
@@ -153,7 +157,7 @@
 			method="POST"
 			doc:name="POST"
 			config-ref="HTTP_Request_Configuration"
-			path="/api/contact">
+			path="${test.basepath}">
 			<http:headers><![CDATA[#[output application/java
 				---
 				{
@@ -186,13 +190,13 @@
 			
 		<set-payload
 			value="#[vars.sourcePayload]"
-			doc:name="payload" />
+			doc:name="payload same name" />
 
 		<http:request
 			method="POST"
 			doc:name="retry again"
 			config-ref="HTTP_Request_Configuration"
-			path="/api/contact">
+			path="${test.basepath}">
 			<http:headers><![CDATA[#[output application/java
 				---
 				{
@@ -204,10 +208,42 @@
 			</http:response-validator>
 		</http:request>
 		
-		<logger doc:name="record duplicated" 
+		<logger doc:name="record name duplicated" 
 			level="INFO" 
-			message='The record is already present in the database' />
+			message='The record is already present in the database querying by name' />
 			
+		<munit-tools:assert-that
+			doc:name="verify response"
+			expression='#[payload.message contains "${messages.record-exists}"]'
+			is="#[MunitTools::notNullValue()]" />
+
+		<set-payload doc:name="payload same email" 
+			value='#[%dw 2.0 output application/json --- readUrl("classpath://post-payload-duplicate-email.dwl")]' />
+
+		<http:request
+			method="POST"
+			doc:name="post email duplicated"
+			config-ref="HTTP_Request_Configuration"
+			path="${test.basepath}">
+			<http:headers><![CDATA[#[output application/java
+				---
+				{
+					"Content-Type" : "application/json"
+				}]]]>		
+			</http:headers>
+			<http:response-validator>
+				<http:success-status-code-validator values="409" />
+			</http:response-validator>
+		</http:request>
+		
+		<logger doc:name="record duplicated email" 
+			level="INFO" 
+			message='The record is already present in the database querying by email' />
+
+		<munit-tools:assert-that
+			doc:name="verify response"
+			expression='#[payload.message contains "${messages.record-exists}"]'
+			is="#[MunitTools::notNullValue()]" />
 	</sub-flow>
 	
 
@@ -243,4 +279,169 @@
 			config-ref="Validation_Config"
 			expression="#[vars.id == payload.id]" />
 	</sub-flow>	
+
+	<!-- ****************************************************************************************************** -->
+	<sub-flow name="test-delete">
+			
+		<logger doc:name="delete record"
+			level="INFO"  
+			message='#["delete record id=" ++ vars.id]' />
+
+		<http:request
+			method="DELETE"
+			doc:name="delete"
+			config-ref="HTTP_Request_Configuration"
+			path='#["/api/contact/" ++ vars.id]'>
+
+			<http:response-validator>
+				<http:success-status-code-validator values="200" />
+			</http:response-validator>
+		</http:request>
+
+		<logger doc:name="result"
+			level="INFO"  
+			message='#[payload]' />
+		
+		<validation:is-true
+			doc:name="message is success"
+			config-ref="Validation_Config"
+			expression='#[payload.message contains "${messages.record-delete-success}"]' />
+
+	</sub-flow>	
+
+	<!-- *************************************************** -->
+	<!-- **** ERROR SCENARIOS                          ***** -->
+	<!-- **** delete-incorrect-id                      ***** -->
+	<!-- *************************************************** -->	
+
+	<munit:test name="delete-incorrect-id">
+
+		<munit:enable-flow-sources >
+			<munit:enable-flow-source value="api-main" />
+			<munit:enable-flow-source value="get:\contact:api-config" />
+			<munit:enable-flow-source value="get:\contact\(id):api-config" />
+			<munit:enable-flow-source value="post:\contact:application\json:api-config" />
+			<munit:enable-flow-source value="delete:\contact\(id):api-config" />
+			<munit:enable-flow-source value="query" />
+			<munit:enable-flow-source value="get-by-filter" />
+			<munit:enable-flow-source value="get-by-id" />
+			<munit:enable-flow-source value="post" />
+		</munit:enable-flow-sources>
+
+		<munit:execution>
+
+			<logger doc:name="delete"
+				level="INFO" 
+				message="Delete with incorrect id"/>
+
+			<http:request
+				method="DELETE"
+				doc:name="Delete"
+				config-ref="HTTP_Request_Configuration"
+				path="${test.basepath}/{id}">
+				<http:headers><![CDATA[#[output application/java
+					---
+					{
+						"Content-Type" : "application/json"
+					}]]]>
+				</http:headers>
+				<http:uri-params><![CDATA[#[output application/java
+					---
+					{
+						"id" : "a018b00000yYNxGAA1"
+					}]]]>
+				</http:uri-params>
+				<http:response-validator>
+					<http:success-status-code-validator values="400" />
+				</http:response-validator>
+			</http:request>
+
+			<logger doc:name="result"
+				level="INFO" 
+				message='#[payload]' />
+
+		</munit:execution>
+
+		<munit:validation>
+			<munit-tools:assert-that
+				doc:name="verify message"
+				expression='#[payload.message contains "${messages.record-delete-error}"]'
+				is="#[MunitTools::notNullValue()]" />
+		</munit:validation>
+	</munit:test>
+
+	<!-- *************************************************** -->
+	<!-- **** ERROR SCENARIOS                          ***** -->
+	<!-- **** post-backend-exception                   ***** -->
+	<!-- *************************************************** -->	
+
+	<munit:test name="post-backend-exception" >
+
+		<munit:enable-flow-sources >
+			<munit:enable-flow-source value="api-main" />
+			<munit:enable-flow-source value="get:\contact:api-config" />
+			<munit:enable-flow-source value="get:\contact\(id):api-config" />
+			<munit:enable-flow-source value="post:\contact:application\json:api-config" />
+			<munit:enable-flow-source value="delete:\contact\(id):api-config" />
+			<munit:enable-flow-source value="query" />
+			<munit:enable-flow-source value="get-by-filter" />
+			<munit:enable-flow-source value="get-by-id" />
+			<munit:enable-flow-source value="post" />
+		</munit:enable-flow-sources>
+
+		<munit:behavior>
+			<munit:set-event doc:name="payload">
+				<munit:payload value='#[%dw 2.0 output application/json --- readUrl("classpath://post-payload.dwl")]' />
+			</munit:set-event>
+
+			<munit-tools:mock-when doc:name="Salesforce not success"
+				processor="salesforce:create">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute
+						whereValue="Contact"
+						attributeName="type" />
+					</munit-tools:with-attributes>
+				<munit-tools:then-return>
+					<munit-tools:payload
+						value='#[%dw 2.0 output application/json --- {"successful": "false"}]'
+						encoding="UTF-8" />
+					<munit-tools:error typeId="ANY" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+
+			<logger doc:name=" payload"
+				level="INFO" 
+				message="#[payload]"/>
+		</munit:behavior>
+
+		<munit:execution>
+
+			<http:request doc:name="post"
+				method="POST"
+				config-ref="HTTP_Request_Configuration"
+				path="${test.basepath}">
+				<http:headers><![CDATA[#[output application/java
+					---
+					{
+						"Content-Type" : "application/json"
+					}]]]>		
+				</http:headers>
+				<http:response-validator>
+					<http:success-status-code-validator values="500" />
+				</http:response-validator>
+			</http:request>
+
+			<logger doc:name="result"
+				level="INFO" 
+				message='#[payload]' />
+
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that
+				doc:name="verify response"
+				expression='#[payload.message contains "${messages.record-create-error}"]'
+				is="#[MunitTools::notNullValue()]" />
+		</munit:validation>
+	</munit:test>
+
 </mule>
