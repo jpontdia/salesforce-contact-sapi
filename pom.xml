@@ -11,7 +11,7 @@
 	 
 	<groupId>078efef1-d139-48ed-92f5-f8d4a0592374</groupId>
 	<artifactId>salesforce-contact-sapi-asset</artifactId>
-	<version>1.0.10</version>
+	<version>1.0.11</version>
 	<packaging>mule-application</packaging>   
 	<name>salesforce-contact-sapi</name>
 	<description>Mulesoft service for creating contacts in Salesforce</description>
@@ -23,6 +23,11 @@
 		<categories key="Asset type">API</categories>
         <tags>Salesforce, System, Contact</tags>
 		<fields key="sourceCode">https://github.com/jpontdia/micorp-customer-sapi</fields>
+
+		<!-- Anypoint Visualizer -->
+		<!-- Alternative customization in properties: https://docs.mulesoft.com/visualizer/customize-your-canvas -->
+		<anypoint.platform.visualizerLayer>System</anypoint.platform.visualizerLayer>
+		<anypoint.platform.visualizerTags>Salesforce,Contact</anypoint.platform.visualizerTags>
 
 		<!-- RAML specification -->
 		<restconnector.api.spec.group>${project.groupId}</restconnector.api.spec.group>

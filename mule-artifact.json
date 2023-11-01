@@ -12,6 +12,8 @@
   	"salesforce.certificatealias",
 	"otel.collectorendpoint",
 	"logzio.token",
-	"logzio.url"
+	"logzio.url",
+	"splunk.token",
+	"splunk.url"
   ]
 }
