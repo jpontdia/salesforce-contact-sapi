@@ -49,17 +49,14 @@
 			</http:request>
 			<ee:transform doc:name="Transform Message">
 				<ee:message>
-					<ee:set-payload><![CDATA[%dw 2.0
-					output text
-					---
-					payload as String]]>
+					<ee:set-payload><![CDATA[%dw 2.0 output text --- payload as String]]>
 					</ee:set-payload>
 				</ee:message>
 			</ee:transform>
 
 			<logger doc:name="result"
                 level="INFO"      
-                message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;   message: "Result",&#10; payload: payload&#10;}]' />
+                message='#[%dw 2.0 output application/json --- {  message: "Result", payload: payload}]' />
 		</munit:execution>
 		<munit:validation>
 			<munit-tools:assert-that
